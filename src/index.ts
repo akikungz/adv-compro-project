@@ -1,41 +1,34 @@
 import express from 'express';
+import cors from 'cors';
 
-// Type
-import type { Response } from 'express';
-import IResponse from './interface/IResponse';
+import path from 'path';
+import fs from 'fs';
 
-// Router
-import v1Router from './v1';
+import { prisma, redis } from './database';
 
-// Database
-import prisma from './database';
-
-const app = express();
 console.clear();
 
-async function bootstrap() {
-    app.use(express.urlencoded({ extended: true }));
-    app.use(express.json());
-    app.use((req, res, next) => {
-        res.header("Access-Control-Allow-Origin", "*");
-        next();
-    })
+const app = express();
 
-    app.use("/v1", v1Router);
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-    app.use((req, res: Response<IResponse<null>>) => {
-        res.send({
-            status: 404,
-            message: "Not Found",
-            data: null
-        })
+app.use(cors());
+
+fs.readdirSync(path.join(__dirname, 'routes'))
+    .filter(file => file.endsWith(".js") || file.endsWith(".ts"))
+    .map(async (file) => {
+        app.use(`/api/${file.split('.')[0]}`, (await import(`./routes/${file}`)).default);
+        console.log(`[ROUTES]: ${file} loaded`);
     });
 
-    app.listen(process.env.PORT, () => console.log(`Server running on port ${process.env.PORT}`));
+async function bootstrap() {
+    await prisma.$connect();
+    console.log('[DATABASE]: Database connected');
+
+    await redis.connect();
+
+    app.listen(process.env.PORT, () => console.log(`[SERVER]: Server started on port ${process.env.PORT}`));
 }
 
-bootstrap()
-    .then(() => prisma.$connect())
-    .then(() => console.log(`Exit key: ${process.env.EXIT_KEY}`))
-    .catch(console.error)
-    .finally(() => prisma.$disconnect());
+bootstrap();

@@ -5,7 +5,21 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm install
 
+ARG SECRET_KEY
+ENV SECRET_KEY=$SECRET_KEY
+
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
+ARG REDIS_URL
+ENV REDIS_URL=$REDIS_URL
+
+ENV port=8080
+
 COPY . .
-EXPOSE 8080
+
+RUN npm run build
+
+EXPOSE 8080:8080
 
 CMD ["npm", "start"]
