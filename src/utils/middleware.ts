@@ -11,28 +11,28 @@ export default (req, res: IResponse<null>, next: NextFunction) => {
     if (!token) {
         return res.status(401).send({
             status: 401,
-            message: "Unauthorized 1",
+            message: "[Unauthorized]: No token provided",
             data: null
         })
     }
 
-    verify(token, process.env.JWT_SECRET!, async (err, decoded) => {
+    verify(token, process.env.JWT_SECRET!, async (err: unknown, decoded: unknown) => {
         if (err) {
             return res.status(401).send({
                 status: 401,
-                message: "Unauthorized 2",
+                message: "[Unauthorized]: Invalid token",
                 data: null
             })
         }
 
-        const userId = (decoded as unknown as { id: string }).id;
+        const userId = (decoded as { id: string }).id;
 
         const result = await redis.get(token);
 
         if (result !== userId) {
             return res.status(401).send({
                 status: 401,
-                message: "Unauthorized 3",
+                message: "[Unauthorized]: Invalid token or token expired",
                 data: null
             })
         }

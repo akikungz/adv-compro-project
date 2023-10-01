@@ -1,15 +1,16 @@
 import { Router } from 'express';
 
-import { prisma, redis } from '../database';
+import { prisma } from '../database';
 import middleware from '../utils/middleware';
 import { calcSkip, calcTotalPage } from '../utils/panigation';
 
-import { IRequestBody, IRequestQuery } from '../types/request';
+import { IRequestBody } from '../types/request';
 import IResponse from '../types/response';
+import { getIdFromToken } from '../utils/token';
 
 const router = Router();
 
-router.get('/', async (req, res: IResponse<any>) => {
+router.get('/', middleware, async (req, res: IResponse<any>) => {
     const { page, limit } = req.query as { page: string, limit: string };
 
     const intPage = page ? parseInt(page) : 1;
@@ -25,7 +26,7 @@ router.get('/', async (req, res: IResponse<any>) => {
         data: null
     });
 
-    const posts = await prisma.post.findMany({
+    const prePost = await prisma.post.findMany({
         skip,
         take: intLimit,
         orderBy: {
@@ -33,43 +34,74 @@ router.get('/', async (req, res: IResponse<any>) => {
         },
         include: { 
             author: true,
-            likes: true,
-            shares: true,
-            children: true
-        }
+            _count: {
+                select: { 
+                    children: true
+                }
+            },
+        },
     });
 
-    return res.status(200).send({
-        status: 200,
-        message: 'OK',
-        data: {
-            posts: posts.map(post => ({
-                id: post.id,
-                content: post.content,
-                author: {
-                    id: post.author.id,
-                    username: post.author.username
-                },
-                createdAt: post.createdAt,
-                updatedAt: post.updatedAt
-            })),
-            pagination: {
-                page: intPage,
-                limit: intLimit,
-                total,
-                totalPage
+    const ePost = prePost.map(async (post) => {
+        const saved = await prisma.savePost.findFirst({
+            where: {
+                postId: post.id,
+                userId: getIdFromToken(req.headers.authorization as string).id
             }
+        });
+
+        return {
+            ...post,
+            saved: saved ? true : false
         }
-    });
+    })
+
+    const posts = await Promise.all(ePost);
+
+    try {
+        res.status(200).send({
+            status: 200,
+            message: 'OK',
+            data: {
+                posts: posts.map((post) => ({
+                    id: post.id,
+                    content: post.content,
+                    author: {
+                        id: post.author.id,
+                        username: post.author.username
+                    },
+                    parent: post.parentId,
+                    saved: post.saved,
+                    children_count: post._count.children,
+                    created_at: post.createdAt,
+                    updated_at: post.updatedAt
+                })),
+                pagination: {
+                    page: intPage,
+                    limit: intLimit,
+                    total_data: total,
+                    total_page: totalPage
+                }
+            }
+        });
+    } catch (err) {
+        res.status(500).send({
+            status: 500,
+            message: '[Internal Server Error]: Failed to get posts',
+            data: null
+        });
+    }
 });
 
 router.post('/', middleware, async (req: IRequestBody<{ content: string, user: string }>, res: IResponse<any>) => {
-    const { content, user } = req.body;
+    const { content } = req.body;
+
+    const user = getIdFromToken(req.headers.authorization as string).id;
 
     if (!content) {
         return res.status(400).send({
             status: 400,
-            message: 'Bad Request',
+            message: '[Bad Request]: Missing [content] in request body',
             data: null
         });
     }
@@ -82,15 +114,24 @@ router.post('/', middleware, async (req: IRequestBody<{ content: string, user: s
                     id: user
                 }
             }
+        },
+        include: {
+            author: true
         }
     });
 
     return res.status(201).send({
         status: 201,
-        message: 'Created',
+        message: `[Created]: Successfully created post [${post.id}]`,
         data: {
             id: post.id,
             content: post.content,
+            author: {
+                id: post.author.id,
+                username: post.author.username
+            },
+            created_at: post.createdAt,
+            updated_at: post.updatedAt
         }
     });
 });
@@ -102,11 +143,17 @@ router.get('/:id', middleware, async (req, res: IResponse<any>) => {
         where: { id }, 
         include: {
             author: true,
-            likes: true,
-            shares: true,
             children: {
                 include: {
-                    author: true
+                    author: true,
+                    _count: {
+                        select: {
+                            children: true
+                        }
+                    }
+                },
+                orderBy: {
+                    createdAt: 'desc'
                 }
             }
         } 
@@ -119,6 +166,30 @@ router.get('/:id', middleware, async (req, res: IResponse<any>) => {
             data: null
         });
     }
+
+    const saved = await prisma.savePost.findFirst({
+        where: {
+            postId: id,
+            userId: getIdFromToken(req.headers.authorization as string).id
+        }
+    });
+
+    const ePost = post.children.map(async (child) => {
+        const saved = await prisma.savePost.findFirst({
+            where: {
+                postId: child.id,
+                userId: getIdFromToken(req.headers.authorization as string).id
+            }
+        });
+
+        return {
+            ...child,
+            saved: saved ? true : false
+        }
+    })
+
+    const children = await Promise.all(ePost);
+
     return res.status(200).send({
         status: 200,
         message: 'OK',
@@ -129,34 +200,37 @@ router.get('/:id', middleware, async (req, res: IResponse<any>) => {
                 id: post.author.id,
                 username: post.author.username
             },
-            count: {
-                likes: post.likes.length,
-                shares: post.shares.length,
-                comments: post.children.length
-            },
             parent: post.parentId,
-            children: post.children.map(child => ({
+            children: children.map(child => ({
                 id: child.id,
                 content: child.content,
-                user: {
+                author: {
                     id: child.author.id,
                     username: child.author.username
-                }
+                },
+                saved: child.saved,
+                children_count: child._count.children,
+                created_at: child.createdAt,
+                updated_at: child.updatedAt
             })),
-            createdAt: post.createdAt,
-            updatedAt: post.updatedAt
+            children_count: post.children.length,
+            saved: saved ? true : false,
+            created_at: post.createdAt,
+            updated_at: post.updatedAt
         }
     });
 });
 
 router.post('/:id', middleware, async (req: IRequestBody<{ content: string, user: string }>, res: IResponse<any>) => {
     const { id } = req.params as { id: string };
-    const { content, user } = req.body;
+    const { content } = req.body;
+
+    const user = getIdFromToken(req.headers.authorization as string).id;
 
     if (!content) {
         return res.status(400).send({
             status: 400,
-            message: 'Bad Request',
+            message: '[Bad Request]: Missing [content] in request body',
             data: null
         });
     }
@@ -174,6 +248,9 @@ router.post('/:id', middleware, async (req: IRequestBody<{ content: string, user
                     id: user
                 }
             }
+        },
+        include: {
+            author: true
         }
     });
 
@@ -193,113 +270,65 @@ router.post('/:id', middleware, async (req: IRequestBody<{ content: string, user
         
         return res.status(201).send({
             status: 201,
-            message: 'Created',
+            message: `[Created]: Successfully created post [${post.id}]`,
             data: {
                 id: post.id,
                 content: post.content,
+                author: {
+                    id: post.author.id,
+                    username: post.author.username
+                },
+                created_at: post.createdAt,
+                updated_at: post.updatedAt
             }
         });
     } else {
         return res.status(400).send({
             status: 400,
-            message: 'Bad Request',
+            message: '[Bad Request]: Failed to create post',
             data: null
         });
     }
 });
 
-router.patch('/:id/like', middleware, async (req, res: IResponse<any>) => {
+router.patch('/:id', middleware, async (req, res: IResponse<any>) => {
     const { id } = req.params as { id: string };
-    const { user } = req.body as { user: string };
 
-    const liked = await prisma.likePost.findFirst({
+    const user = getIdFromToken(req.headers.authorization as string).id;
+
+    const checkData = await prisma.savePost.findFirst({
         where: {
             postId: id,
             userId: user
         }
     });
 
-    if (liked) {
-        await prisma.likePost.update({
-            where: {
-                id: liked.id
-            },
+    if (!checkData) {
+        const savePost = await prisma.savePost.create({
             data: {
-                active: !liked.active
+                postId: id,
+                userId: user
             }
+        });
+
+        return res.status(201).send({
+            status: 201,
+            message: `[Created]: Successfully saved post [${id}]`,
+            data: savePost.id
         });
     } else {
-        await prisma.likePost.create({
-            data: {
-                post: {
-                    connect: {
-                        id
-                    }
-                },
-                user: {
-                    connect: {
-                        id: user
-                    }
-                }
-            }
-        });
-    }
-
-    return res.status(200).send({
-        status: 200,
-        message: 'OK',
-        data: {
-            liked: !liked?.active,
-            post: id
-        }
-    });
-});
-
-router.patch('/:id/share', middleware, async (req, res: IResponse<any>) => {
-    const { id } = req.params as { id: string };
-    const { user } = req.body as { user: string };
-
-    const shared = await prisma.sharePost.findFirst({
-        where: {
-            postId: id,
-            userId: user
-        }
-    });
-
-    if (shared) {
-        await prisma.sharePost.update({
+        await prisma.savePost.delete({
             where: {
-                id: shared.id
-            },
-            data: {
-                active: !shared.active
+                id: checkData.id
             }
         });
-    } else {
-        await prisma.sharePost.create({
-            data: {
-                post: {
-                    connect: {
-                        id
-                    }
-                },
-                user: {
-                    connect: {
-                        id: user
-                    }
-                }
-            }
+
+        return res.status(200).send({
+            status: 200,
+            message: `[OK]: Successfully unsaved post [${id}]`,
+            data: null
         });
     }
-
-    return res.status(200).send({
-        status: 200,
-        message: 'OK',
-        data: {
-            shared: !shared?.active,
-            post: id
-        }
-    });
 });
 
 export default router;

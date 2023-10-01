@@ -49,7 +49,7 @@ router.get("/:id/posts", middleware, async (req: IRequestParams<{ id: string }>,
     });
 });
 
-router.get("/:id/likes", middleware, async (req: IRequestParams<{ id: string }>, res: IResponse<any>) => {
+router.get("/:id/saved", middleware, async (req: IRequestParams<{ id: string }>, res: IResponse<any>) => {
     const { id } = req.params;
     const { page, limit } = req.query as { page: string, limit: string };
 
@@ -57,17 +57,15 @@ router.get("/:id/likes", middleware, async (req: IRequestParams<{ id: string }>,
     const intLimit = limit ? parseInt(limit) : 10;
 
     const skip = intLimit * (intPage - 1);
-    const total = await prisma.likePost.count({
+    const total = await prisma.savePost.count({
         where: {
-            userId: id,
-            active: true
+            userId: id
         }
     });
 
-    const likes = await prisma.likePost.findMany({
+    const savedPosts = await prisma.savePost.findMany({
         where: {
-            userId: id,
-            active: true
+            userId: id
         },
         skip,
         take: intLimit,
@@ -75,7 +73,16 @@ router.get("/:id/likes", middleware, async (req: IRequestParams<{ id: string }>,
             createdAt: "desc"
         },
         include: {
-            post: true
+            post: {
+                include: {
+                    _count: {
+                        select: {
+                            children: true
+                        }
+                    },
+                    author: true
+                }
+            }
         }
     });
 
@@ -83,58 +90,50 @@ router.get("/:id/likes", middleware, async (req: IRequestParams<{ id: string }>,
         status: 200,
         message: "OK",
         data: {
-            likes,
+            posts: savedPosts.map((savedPost) => ({
+                id: savedPost.post.id,
+                content: savedPost.post.content,
+                author: {
+                    id: savedPost.post.author.id,
+                    username: savedPost.post.author.username
+                },
+                children_count: savedPost.post._count.children,
+                parent: savedPost.post.parentId,
+                created_at: savedPost.post.createdAt,
+                updated_at: savedPost.post.updatedAt,
+            })),
             pagination: {
                 page: intPage,
                 limit: intLimit,
-                total,
-                totalPage: calcTotalPage(total, intLimit)
+                total_data: total,
+                total_page: calcTotalPage(total, intLimit)
             }
         }
     });
 });
 
-router.get("/:id/shares", middleware, async (req: IRequestParams<{ id: string }>, res: IResponse<any>) => {
-    const { id } = req.params;
-    const { page, limit } = req.query as { page: string, limit: string };
-
-    const intPage = page ? parseInt(page) : 1;
-    const intLimit = limit ? parseInt(limit) : 10;
-
-    const skip = intLimit * (intPage - 1);
-    const total = await prisma.sharePost.count({
+router.get("/:id", middleware, async (req: IRequestParams<{ id: string }>, res: IResponse<any>) => {
+    const user = await prisma.user.findUnique({
         where: {
-            userId: id,
-            active: true
+            id: req.params.id as string
         }
     });
 
-    const shares = await prisma.sharePost.findMany({
-        where: {
-            userId: id,
-            active: true
-        },
-        skip,
-        take: intLimit,
-        orderBy: {
-            createdAt: "desc"
-        },
-        include: {
-            post: true
-        }
-    });
+    if (!user) {
+        return res.status(404).send({
+            status: 404,
+            message: "[Not Found]: User not found",
+            data: null
+        });
+    }
 
     return res.status(200).send({
         status: 200,
-        message: "OK",
+        message: "[OK]: Successfully get user",
         data: {
-            shares,
-            pagination: {
-                page: intPage,
-                limit: intLimit,
-                total,
-                totalPage: calcTotalPage(total, intLimit)
-            }
+            id: user.id,
+            username: user.username,
+            created_at: user.createdAt,
         }
     });
 });
