@@ -1,35 +1,72 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { ThemeProvider } from '@mui/system'
+import { createTheme } from '@mui/material'
+import { ChakraProvider } from '@chakra-ui/react'
+import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 
-function App() {
-  const [count, setCount] = useState(0)
+import './assets/index.css'
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+import ErrorPage from './pages/error'
+import SigninPage from './pages/signin'
+import SignupPage from './pages/signup'
+import HomePage from './pages/home'
+import SignoutPage from './pages/signout'
+import PostPage from './pages/post'
+import UserSaved from './pages/userSaved'
+
+export default function App() {
+    return (
+        <ChakraProvider>
+            <ThemeProvider theme={
+                createTheme({
+                    palette: {
+                        mode: "light",
+                        primary: {
+                            light: "#bc5d4c",
+                            dark: "#ac3520",
+                            main: "#b94a3f",
+                            contrastText: "#fff"
+                        },
+                        secondary: {
+                            light: "#8a8a8a",
+                            dark: "#6d6d6d",
+                            main: "#7a7a7a",
+                            contrastText: "#fff"
+                        }
+                    }
+                })
+            }>
+                <RouterProvider router={createBrowserRouter([
+                    {
+                        path: '/',
+                        errorElement: <ErrorPage />,
+                        element: <HomePage />
+                    },
+                    {
+                        path: '/error',
+                        element: <ErrorPage />
+                    },
+                    {
+                        path: '/signin',
+                        element: <SigninPage />
+                    },
+                    {
+                        path: '/signup',
+                        element: <SignupPage />
+                    },
+                    {
+                        path: '/signout',
+                        element: <SignoutPage />
+                    },
+                    {
+                        path: '/post/:id',
+                        element: <PostPage />
+                    },
+                    {
+                        path: '/user/:id/saved',
+                        element: <UserSaved />
+                    }
+                ])} />
+            </ThemeProvider>
+        </ChakraProvider>
+    )
 }
-
-export default App
