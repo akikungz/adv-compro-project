@@ -5,12 +5,12 @@ import middleware from '../utils/middleware';
 import { calcSkip, calcTotalPage } from '../utils/panigation';
 
 import { IRequestBody } from '../types/request';
-import IResponse from '../types/response';
+import IResponse, { IPagination, IPost, IPostWithChildren } from '../types/response';
 import { getIdFromToken } from '../utils/token';
 
 const router = Router();
 
-router.get('/', middleware, async (req, res: IResponse<any>) => {
+router.get('/', middleware, async (req, res: IResponse<{ posts: IPost[], pagination: IPagination } | null>) => {
     const { page, limit } = req.query as { page: string, limit: string };
 
     const intPage = page ? parseInt(page) : 1;
@@ -93,7 +93,7 @@ router.get('/', middleware, async (req, res: IResponse<any>) => {
     }
 });
 
-router.post('/', middleware, async (req: IRequestBody<{ content: string, user: string }>, res: IResponse<any>) => {
+router.post('/', middleware, async (req: IRequestBody<{ content: string, user: string }>, res: IResponse<null | { id: string }>) => {
     const { content } = req.body;
 
     const user = getIdFromToken(req.headers.authorization as string).id;
@@ -124,19 +124,12 @@ router.post('/', middleware, async (req: IRequestBody<{ content: string, user: s
         status: 201,
         message: `[Created]: Successfully created post [${post.id}]`,
         data: {
-            id: post.id,
-            content: post.content,
-            author: {
-                id: post.author.id,
-                username: post.author.username
-            },
-            created_at: post.createdAt,
-            updated_at: post.updatedAt
+            id: post.id
         }
     });
 });
 
-router.get('/:id', middleware, async (req, res: IResponse<any>) => {
+router.get('/:id', middleware, async (req, res: IResponse<IPostWithChildren>) => {
     const { id } = req.params;
 
     const post = await prisma.post.findFirst({ 
@@ -221,7 +214,7 @@ router.get('/:id', middleware, async (req, res: IResponse<any>) => {
     });
 });
 
-router.post('/:id', middleware, async (req: IRequestBody<{ content: string, user: string }>, res: IResponse<any>) => {
+router.post('/:id', middleware, async (req: IRequestBody<{ content: string, user: string }>, res: IResponse<null | { id: string }>) => {
     const { id } = req.params as { id: string };
     const { content } = req.body;
 
@@ -272,14 +265,7 @@ router.post('/:id', middleware, async (req: IRequestBody<{ content: string, user
             status: 201,
             message: `[Created]: Successfully created post [${post.id}]`,
             data: {
-                id: post.id,
-                content: post.content,
-                author: {
-                    id: post.author.id,
-                    username: post.author.username
-                },
-                created_at: post.createdAt,
-                updated_at: post.updatedAt
+                id: post.id
             }
         });
     } else {
@@ -291,7 +277,7 @@ router.post('/:id', middleware, async (req: IRequestBody<{ content: string, user
     }
 });
 
-router.patch('/:id', middleware, async (req, res: IResponse<any>) => {
+router.patch('/:id', middleware, async (req, res: IResponse<null | {}>) => {
     const { id } = req.params as { id: string };
 
     const user = getIdFromToken(req.headers.authorization as string).id;
