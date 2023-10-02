@@ -317,4 +317,36 @@ router.patch('/:id', middleware, async (req, res: IResponse<null | {}>) => {
     }
 });
 
+router.delete('/:id', middleware, async (req, res: IResponse<null>) => {
+    const { id } = req.params as { id: string };
+    const user = getIdFromToken(req.headers.authorization as string).id;
+
+    const post = await prisma.post.findFirst({
+        where: {
+            id,
+            authorId: user
+        }
+    });
+
+    if (!post) {
+        return res.status(404).send({
+            status: 404,
+            message: 'Not Found',
+            data: null
+        });
+    }
+
+    await prisma.post.delete({
+        where: {
+            id
+        }
+    });
+
+    return res.status(200).send({
+        status: 200,
+        message: `[OK]: Successfully deleted post [${id}]`,
+        data: null
+    });
+});
+
 export default router;
