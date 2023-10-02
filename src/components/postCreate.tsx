@@ -20,7 +20,7 @@ export default function PostCreate ({ setState, state, parrent }: PostCreateProp
     const handleSubmit = async () => {
         try {
             if (!parrent) {
-                const { data: req } = await axios.post<Response<Post | null>>(`${config.base_url}/posts`, { content }, {
+                const { data: req } = await axios.post<Response<{ id: string } | null>>(`${config.base_url}/posts`, { content }, {
                     headers: { Authorization: `Bearer ${auth.user_token}` }
                 })
     
@@ -28,7 +28,11 @@ export default function PostCreate ({ setState, state, parrent }: PostCreateProp
                     setError(prev => ([...prev, req.message]))
                 } else {
                     setContent("")
-                    setState([req.data, ...state] as Post[])
+                    axios.get<Response<Post>>(`${config.base_url}/posts/${req.data?.id}`, {
+                        headers: { Authorization: `Bearer ${auth.user_token}` }
+                    }).then(({ data }) => {
+                        setState([data.data, ...state] as Post[])
+                    })
                 }
             } else {
                 const { data: req } = await axios.post<Response<Post | null>>(`${config.base_url}/posts/${parrent}`, { content }, {
@@ -39,7 +43,11 @@ export default function PostCreate ({ setState, state, parrent }: PostCreateProp
                     setError(prev => ([...prev, req.message]))
                 } else {
                     setContent("")
-                    setState([req.data, ...state] as Post[])
+                    axios.get<Response<Post>>(`${config.base_url}/posts/${req.data?.id}`, {
+                        headers: { Authorization: `Bearer ${auth.user_token}` }
+                    }).then(({ data }) => {
+                        setState([data.data, ...state] as Post[])
+                    })
                 }
             }
         } catch (err) {}

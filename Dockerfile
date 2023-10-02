@@ -10,8 +10,8 @@ ENV API_URL=$API_URL
 
 COPY . .
 
-EXPOSE 8080:8080
-
 RUN npm run build
 
-CMD ["npm", "run", "start"]
+EXPOSE 8080:8080
+
+CMD [ "npm", "run", "preview" ]

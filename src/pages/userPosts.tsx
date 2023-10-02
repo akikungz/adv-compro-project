@@ -29,7 +29,8 @@ export default function UserPosts() {
         limit: 10
     }
 
-    const [loading, setLoading] = useState<boolean>(true)
+    const [postLoading, setPostLoading] = useState<boolean>(true)
+    const [userLoading, setUserLoading] = useState<boolean>(true)
     const [hasMore, setHasMore] = useState<boolean>(true)
     const [posts, setPosts] = useState<Post[]>([])
     const [user, setUser] = useState<User>({} as User)
@@ -55,7 +56,7 @@ export default function UserPosts() {
                         ...req.data.posts
                     ]))
                 setPagination(req.data.pagination)
-                setLoading(false)
+                setPostLoading(false)
             } else if (req.status === 403) {
                 auth.no_auth()
             } else if (req.status === 404){
@@ -77,6 +78,7 @@ export default function UserPosts() {
 
             if (req.status === 200) {
                 setUser(req.data)
+                setUserLoading(false)
             }
         } catch (err) {
             setHasMore(false)
@@ -91,22 +93,26 @@ export default function UserPosts() {
     return (
         <>
             <Navbar />
-            { (auth.user_token && !loading) ? (
+            { (auth.user_token && !postLoading) ? (
                 <Container maxWidth="md" sx={{ marginTop: "2em", paddingX: "4em" }}>
-                    <Card variant="outline" borderBottom="4px" borderColor="blackAlpha.700" className="pb-4">
-                        <CardHeader>
-                            <Flex>
-                                <Flex flex='1' gap='4' alignItems='center' flexWrap="nowrap">
-                                    <Avatar className="hover:cursor-pointer" onClick={() => navigate(`/${user.id}`)}>{ user.username[0].toUpperCase() }</Avatar>
-                                    <Box>
-                                        <Heading size='sm' className="hover:cursor-pointer" onClick={() => navigate(`/${user.id}`)}>{ user.username }</Heading>
-                                        <Text fontSize='sm' color='gray.500'>Created - { format(new Date(user.created_at), "dd/MM/yyyy") }</Text>
-                                    </Box>
+                    { !userLoading ? (
+                        <Card variant="outline" borderBottom="4px" borderColor="blackAlpha.700" className="pb-4">
+                            <CardHeader>
+                                <Flex>
+                                    <Flex flex='1' gap='4' alignItems='center' flexWrap="nowrap">
+                                        <Avatar className="hover:cursor-pointer" onClick={() => navigate(`/user/${user.id}/posts`)}>{ user.username[0].toUpperCase() }</Avatar>
+                                        <Box>
+                                            <Heading size='sm' className="hover:cursor-pointer" onClick={() => navigate(`/user/${user.id}/posts`)}>{ user.username }</Heading>
+                                            <Text fontSize='sm' color='gray.500'>Created - { format(new Date(user.created_at), "dd/MM/yyyy") }</Text>
+                                        </Box>
+                                    </Flex>
+                                    <Text fontSize='sm' color='gray.500'>Posts</Text>
                                 </Flex>
-                                <Text fontSize='sm' color='gray.500'>Posts</Text>
-                            </Flex>
-                        </CardHeader>
-                    </Card>
+                            </CardHeader>
+                        </Card>
+                    ) : (
+                        <Skeleton active paragraph={{ rows: 2 }} />
+                    ) }
 
                     <InfiniteScroll
                         dataLength={posts.length}
