@@ -47,7 +47,7 @@ export default function Navbar() {
                             {
                                 (auth.user_id && auth.user_name) ? [
                                     <MenuItem onClick={handleCloseUserMenu} key={0}>
-                                        <Link to={`/user/${auth.user_id}`}>
+                                        <Link to={`/user/${auth.user_id}/posts`}>
                                             <Person />
                                             {auth.user_name}
                                         </Link>

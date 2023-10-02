@@ -43,10 +43,10 @@ export default function PostCard({ post, parent, saved }: PostCardProps) {
                                     className="hover:cursor-pointer -mr-3 -ml-2"
                                 />
                             ) }
-                            <Avatar className="hover:cursor-pointer" onClick={() => navigate(`/${post.author.username}`)}>{ post.author.username[0].toUpperCase() }</Avatar>
+                            <Avatar className="hover:cursor-pointer" onClick={() => navigate(`/user/${post.author.id}/posts`)}>{ post.author.username[0].toUpperCase() }</Avatar>
                             <Box>
-                                <Heading size='sm' className="hover:cursor-pointer" onClick={() => navigate(`/${post.author.username}`)}>{ post.author.username }</Heading>
-                                <Text fontSize='sm' color='gray.500'>{ format(new Date(post.created_at), "h:mm b - dd/MM/yyyy") }</Text>
+                                <Heading size='sm' className="hover:cursor-pointer" onClick={() => navigate(`/user/${post.author.id}/posts`)}>{ post.author.username }</Heading>
+                                <Text fontSize='sm' color='gray.500'>{ format(new Date(post.created_at), "h:mm a - dd/MM/yyyy") }</Text>
                             </Box>
                         </Flex>
                         <Flex flex='1' justifyContent='flex-end' alignItems='center'>
@@ -71,17 +71,17 @@ export default function PostCard({ post, parent, saved }: PostCardProps) {
                     </Flex>
                 </CardHeader>
                 <CardBody className="my-2">
-                    <MDEditor.Markdown source={post.content} />
+                    <MDEditor.Markdown source={post.content} style={{ whiteSpace: "pre-wrap" }} />
                 </CardBody>
                 <CardFooter>
                     <Flex width="full" alignItems="center" justifyContent="space-between">
-                        { saved && (
+                        { saved != undefined && (
                             <Button
                                 variant={ save ? "contained" : "outlined" }
                                 size="small"
                                 onClick={async () => {
                                     try {
-                                        const { data: res } = await axios.patch<Response<any>>(`${config.base_url}/posts/${post.id}`, {}, {
+                                        const { data: res } = await axios.patch<Response<null>>(`${config.base_url}/posts/${post.id}`, {}, {
                                             headers: { Authorization: `Bearer ${auth.user_token}` }
                                         })
 

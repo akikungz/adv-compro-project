@@ -80,6 +80,7 @@ export default function PostCreate ({ setState, state, parrent }: PostCreateProp
                     preview="edit"
                     autoCorrect="true"
                     height={100}
+                    style={{ whiteSpace: "pre-wrap" }}
                 />
             </CardBody>
             <CardFooter>

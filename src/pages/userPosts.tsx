@@ -18,7 +18,7 @@ interface User {
     created_at: string;
 }
 
-export default function UserSaved() {
+export default function UserPosts() {
     const navigate = useNavigate();
     const { id } = useParams();
 
@@ -43,8 +43,8 @@ export default function UserSaved() {
                 setHasMore(false)
                 return
             }
-
-            const { data: req } = await axios.get<Response<PostIndex>>(`${config.base_url}/users/${id}/saved?page=${pagination.page + 1}&limit=${pagination.limit}`, { 
+            
+            const { data: req } = await axios.get<Response<PostIndex>>(`${config.base_url}/users/${id}/posts?page=${pagination.page + 1}&limit=${pagination.limit}`, { 
                 headers: { Authorization: `Bearer ${auth.user_token}` } 
             })
 
@@ -62,7 +62,7 @@ export default function UserSaved() {
                 setHasMore(false)
                 navigate("/404")
             } else {
-                navigate("/")
+                setHasMore(false)
             }
         } catch (err) {
             setHasMore(false)
@@ -103,7 +103,7 @@ export default function UserSaved() {
                                         <Text fontSize='sm' color='gray.500'>Created - { format(new Date(user.created_at), "dd/MM/yyyy") }</Text>
                                     </Box>
                                 </Flex>
-                                <Text fontSize='sm' color='gray.500'>Saved Posts</Text>
+                                <Text fontSize='sm' color='gray.500'>Posts</Text>
                             </Flex>
                         </CardHeader>
                     </Card>

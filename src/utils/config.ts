@@ -1,5 +1,5 @@
 const config = {
-    base_url: 'http://akikungz-mac.local:8081/api',
+    base_url: process.env.API_URL,
 }
 
 export default config;

@@ -5,13 +5,14 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 
 import './assets/index.css'
 
-import ErrorPage from './pages/error'
+import ErrorPage from './pages/error404'
 import SigninPage from './pages/signin'
 import SignupPage from './pages/signup'
 import HomePage from './pages/home'
 import SignoutPage from './pages/signout'
 import PostPage from './pages/post'
 import UserSaved from './pages/userSaved'
+import UserPosts from './pages/userPosts'
 
 export default function App() {
     return (
@@ -38,7 +39,6 @@ export default function App() {
                 <RouterProvider router={createBrowserRouter([
                     {
                         path: '/',
-                        errorElement: <ErrorPage />,
                         element: <HomePage />
                     },
                     {
@@ -64,6 +64,14 @@ export default function App() {
                     {
                         path: '/user/:id/saved',
                         element: <UserSaved />
+                    },
+                    {
+                        path: '/user/:id/posts',
+                        element: <UserPosts />
+                    },
+                    {
+                        path: '/404',
+                        element: <ErrorPage />
                     }
                 ])} />
             </ThemeProvider>

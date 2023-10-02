@@ -10,4 +10,12 @@ export default {
     user_id: localStorage.getItem('user_id'),
     create_user_id: (id: string) => localStorage.setItem('user_id', id),
     delete_user_id: () => localStorage.removeItem('user_id'),
+
+    no_auth: () => {
+        localStorage.removeItem('user_token')
+        localStorage.removeItem('user_name')
+        localStorage.removeItem('user_id')
+
+        setTimeout(() => window.location.href = '/signin', 3000)
+    }
 }

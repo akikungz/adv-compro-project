@@ -37,7 +37,11 @@ export default function PostPage() {
                 setPost(req.data)
                 setChildren(req.data.children)
                 setLoading(false)
-            } else {
+            } else if (req.status === 403) {
+                auth.no_auth()
+            } else if (req.status === 404){
+                navigate("/404")
+            }  else {
                 navigate("/")
             }
         } catch (err) {

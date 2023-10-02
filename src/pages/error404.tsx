@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import Navbar from "../components/navbar";
 
-export default function ErrorPage() {
+export default function Error404Page() {
     return (
         <>
             <Navbar />

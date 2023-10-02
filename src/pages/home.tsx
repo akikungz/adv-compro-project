@@ -1,6 +1,6 @@
 import Navbar from "../components/navbar";
 import auth from "../utils/auth";
-import { Container, LinearProgress } from "@mui/material";
+import { Container } from "@mui/material";
 import { Post, PostIndex, Response } from "../assets/types";
 import { useCallback, useEffect, useState } from "react";
 import config from "../utils/config";
@@ -45,6 +45,8 @@ export default function HomePage() {
                         ...req.data.posts
                     ]))
                 setPagination(req.data.pagination)
+            } else {
+                auth.no_auth()
             }
         } catch (err) {
             setHasMore(false)
