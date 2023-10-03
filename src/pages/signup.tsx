@@ -5,7 +5,7 @@ import auth from "../utils/auth";
 import { Form, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Alert } from "antd";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
 import config from "../utils/config";
 import { Response } from "../assets/types";
@@ -50,7 +50,7 @@ export default function SignupPage() {
                 }
     
             } catch (err) {
-                console.log(err)
+                setError(prev => ([...prev, (err as AxiosError<Response<string | null>>).response?.data.message ?? "Something went wrong"]))
             }
         }
     }
