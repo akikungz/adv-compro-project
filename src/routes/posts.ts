@@ -336,10 +336,16 @@ router.delete('/:id', middleware, async (req, res: IResponse<null>) => {
         });
     }
 
-    await prisma.post.delete({
+    await prisma.savePost.deleteMany({
         where: {
-            id
+            postId: id
         }
+    }).then(async () => {
+        await prisma.post.delete({
+            where: {
+                id
+            }
+        });
     });
 
     return res.status(200).send({
