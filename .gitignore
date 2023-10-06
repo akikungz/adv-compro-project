@@ -132,3 +132,4 @@ build
 
 *.sh
 *-tests
+.DS_Store
